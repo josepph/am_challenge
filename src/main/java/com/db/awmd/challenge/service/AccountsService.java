@@ -17,7 +17,7 @@ public class AccountsService {
     this.accountsRepository = accountsRepository;
   }
 
-  public void createAccount(Account account) {
+  public synchronized void createAccount(Account account) {
     this.accountsRepository.createAccount(account);
   }
 
