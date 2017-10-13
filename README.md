@@ -1,10 +1,10 @@
 # The Asset Management Digital Challenge
 
-##Summary:
+## Summary:
 
 * add functionality for a transfer of money between accounts
 
-##Available functionality:
+## Available functionality:
 
 1) create sample accounts:
 
@@ -28,8 +28,15 @@
     [GET] localhost:18080/v1/transfers/transf-a
 
 
-##Considerations:
+## Considerations:
 
 1) TransferId is required to be manually created by the user
 2) Accounts involved in a transfer need to exist before the transfer is created
+
+
+## How this can be production ready:
+1) Add persistence
+2) Continuous integration and continuous delivery
+3) Authentication and authorization
+4) Auditory (who did what)
 

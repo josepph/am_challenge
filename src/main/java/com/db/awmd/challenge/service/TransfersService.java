@@ -47,6 +47,7 @@ public class TransfersService {
         throw (ex);
       }
       this.emailNotificationService.notifyAboutTransfer(accountTo, "Transfer identified as " + transfer.getTransferId() + " is completed.");
+      this.emailNotificationService.notifyAboutTransfer(accountFrom, "Transfer identified as " + transfer.getTransferId() + " is completed.");
     } else {
       log.info("Transfer " + transfer.getTransferId() + " could not be created because source account had not enough funds.");
     }
