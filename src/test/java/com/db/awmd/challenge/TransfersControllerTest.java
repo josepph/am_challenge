@@ -13,16 +13,16 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 
@@ -50,59 +50,41 @@ public class TransfersControllerTest {
     this.mockMvc = webAppContextSetup(this.webApplicationContext).build();
 
     // Reset the existing transfers before each test.
-    transfersService.getTransfersRepository().clearTransfers();
+    this.transfersService.getTransfersRepository().clearTransfers();
 
     // Reset the existing accounts before each test.
-    accountsService.getAccountsRepository().clearAccounts();
+    this.accountsService.getAccountsRepository().clearAccounts();
 
     // prior to create a transfer, we need to create the two accounts
-    accountsService.createAccount(accountOne);
-    accountsService.createAccount(accountTwo);
+    this.accountsService.createAccount(accountOne);
+    this.accountsService.createAccount(accountTwo);
   }
 
   @Test
   public void createTransfer() throws Exception {
+
+    String strJson = "{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}";
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"transferId\":\"transfer-a\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}"))
-            .andDo(print())
-            .andExpect(status().isCreated());
-
-    Transfer transfer = transfersService.getTransfer("transfer-a");
-    assertThat(transfer.getAccountFromId()).isEqualTo("Id-123");
-    assertThat(transfer.getAccountFromId()).isEqualTo("Id-123");
-    assertThat(transfer.getAccountToId()).isEqualTo("Id-234");
-    assertThat(transfer.getAmount()).isEqualTo(BigDecimal.valueOf(400));
-  }
-
-  @Test
-  public void createDuplicateTransfer() throws Exception {
-    // the same transfer cannot happen twice with the same transferId
-    this.mockMvc.perform(post("/v1/transfers").contentType(MediaType.APPLICATION_JSON)
-      .content("{\"transferId\":\"transfer-b\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}")).andExpect(status().isCreated());
-
-    this.mockMvc.perform(post("/v1/transfers").contentType(MediaType.APPLICATION_JSON)
-      .content("{\"transferId\":\"transfer-b\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}")).andExpect(status().isBadRequest());
-  }
-
-  @Test
-  public void createTransferNotTansferId() throws Exception {
-    this.mockMvc.perform(post("/v1/transfers")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":500}"))
-            .andExpect(status().isBadRequest());
+            .content(strJson))
+            .andExpect(status().is2xxSuccessful())
+            .andExpect(jsonPath("$.accountFromId", containsString("Id-123")))
+            .andExpect(jsonPath("$.accountToId", containsString("Id-234")));
   }
 
   @Test
   public void createTransferNoAmount() throws Exception {
+
+    String strJson = "{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\"}";
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"transferId\":\"transfer-c\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\"}"))
+            .content(strJson))
             .andExpect(status().isBadRequest());
   }
 
   @Test
   public void createTransferNoBody() throws Exception {
+
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isBadRequest());
@@ -110,70 +92,68 @@ public class TransfersControllerTest {
 
   @Test
   public void createTransferNegativeAmount() throws Exception {
+
+    String strJson = "{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":-300}";
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"transferId\":\"transfer-d\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":-300}"))
+            .content(strJson))
             .andExpect(status().isBadRequest());
   }
 
   @Test
   public void createTransferNegativeBalance() throws Exception {
-     this.mockMvc.perform(post("/v1/transfers")
+
+    String strJson = "{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":5000}";
+    MvcResult result = this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"transferId\":\"transfer-e\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":5000}"))
-            .andExpect(status().is2xxSuccessful());
-
-    Transfer transfer = transfersService.getTransfer("transfer-e");
-    assertThat(transfer).isNull();
-
+            .content(strJson))
+            .andExpect(status().is4xxClientError())
+            .andReturn();
+     assertEquals(result.getResponse().getContentAsString().endsWith("had not enough funds."), true);
   }
 
   @Test
   public void createTransferEmptytransferId() throws Exception {
+
+    String strJson = "{\"transferId\":" + "" + ",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":100}";
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"transferId\":\"\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":100}"))
+            .content(strJson))
             .andExpect(status().isBadRequest());
   }
 
   @Test
-  public void getTransfer() throws Exception {
-    Transfer transfer = new Transfer("transfer-f","Id-234", "Id-123", BigDecimal.valueOf(1500));
+  public void getTransferById() throws Exception {
+
+    String strJson = "{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}";
+
+    Transfer transfer = new Transfer("Id-234", "Id-123", BigDecimal.TEN);
     this.transfersService.createTransfer(transfer);
+
     this.mockMvc.perform(get("/v1/transfers/" + transfer.getTransferId()))
       .andExpect(status().isOk())
       .andExpect(
-        content().string("{\"transferId\":\"" + transfer.getTransferId() + "\",\"accountFromId\":\"Id-234\",\"accountToId\":\"Id-123\",\"amount\":1500}"));
+        content().string("{\"present\":true}"));
   }
 
-    @Test
+  @Test
   public void validateAmountIsSubtracted() throws Exception {
 
-    Account accountFromBefore = accountsService.getAccount("Id-123");
-    BigDecimal initialBalanceFrom = accountFromBefore.getBalance();
+     String strJson = "{\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}";
 
-    Account accountToBefore = accountsService.getAccount("Id-234");
-    BigDecimal initialBalanceTo = accountToBefore.getBalance();
+     BigDecimal initialBalanceFrom = accountsService.getAccount("Id-123").getBalance();
+     BigDecimal initialBalanceTo = accountsService.getAccount("Id-234").getBalance();
 
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"transferId\":\"transfer-a\",\"accountFromId\":\"Id-123\",\"accountToId\":\"Id-234\",\"amount\":400}"))
-            .andExpect(status().isCreated());
+            .content(strJson))
+            .andExpect(status().is2xxSuccessful());
 
-    Transfer transfer = transfersService.getTransfer("transfer-a");
-    assertThat(transfer.getAccountFromId()).isEqualTo("Id-123");
-    assertThat(transfer.getAccountToId()).isEqualTo("Id-234");
-    assertThat(transfer.getAmount()).isEqualTo(BigDecimal.valueOf(400));
+    BigDecimal finalBalanceFrom = accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = accountsService.getAccount("Id-234").getBalance();
 
-    // validate amount is subtracted from "from" account
-    Account accountFromAfter = accountsService.getAccount(transfer.getAccountFromId());
-    BigDecimal finalBalance = accountFromAfter.getBalance();
-    assertThat(transfer.getAmount().add(finalBalance)).isEqualTo(initialBalanceFrom);
-
-    // validate amount is added to "to" account
-    Account accountToAfter = accountsService.getAccount(transfer.getAccountToId());
-    BigDecimal finalBalanceTo = accountToAfter.getBalance();
-    assertThat(initialBalanceTo.add(transfer.getAmount())).isEqualTo(finalBalanceTo);
+    assertEquals(initialBalanceFrom.subtract(BigDecimal.valueOf(400)), BigDecimal.valueOf(2600));
+    assertEquals(initialBalanceTo.add(BigDecimal.valueOf(400)), BigDecimal.valueOf(2400));
 
   }
 

@@ -8,13 +8,13 @@ import org.hibernate.validator.constraints.NotEmpty;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 public class Transfer {
 
   @NotNull
-  @NotEmpty
-  private String transferId;
+  private UUID transferId;
 
   @NotNull
   @NotEmpty
@@ -29,11 +29,10 @@ public class Transfer {
   private BigDecimal amount;
 
   @JsonCreator
-  public Transfer(@JsonProperty("transferId") String transferId,
-                    @JsonProperty("accountFromId") String accountFromId,
+  public Transfer(  @JsonProperty("accountFromId") String accountFromId,
                     @JsonProperty("accountToId") String accountToId,
                     @JsonProperty("amount") BigDecimal amount) {
-    this.transferId = transferId;
+    this.transferId = UUID.randomUUID();
     this.accountFromId = accountFromId;
     this.accountToId = accountToId;
     this.amount = amount;

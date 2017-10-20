@@ -1,16 +1,22 @@
 package com.db.awmd.challenge.service;
 
-import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.Transfer;
-import com.db.awmd.challenge.exception.DuplicateTransferIdException;
 import com.db.awmd.challenge.repository.TransfersRepository;
+import com.google.common.base.Throwables;
+import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TransfersService {
 
   @Getter
@@ -18,44 +24,45 @@ public class TransfersService {
   private final AccountsService accountsService;
   private final EmailNotificationService emailNotificationService;
 
-  @Autowired
-  public TransfersService(TransfersRepository transfersRepository, AccountsService accountsService, EmailNotificationService emailNotificationService) {
-    this.transfersRepository = transfersRepository;
-    this.accountsService = accountsService;
-    this.emailNotificationService = emailNotificationService;
+  public Optional<Transfer> createTransfer(Transfer transfer) {
+
+    Observable<Transfer> concurrentData = (
+            putTransfer (
+                    () -> transfersRepository.createTransfer(transfer), transfer)
+    );
+
+    if (concurrentData.isEmpty().blockingGet()) {
+      return Optional.empty();
+    }
+    return Optional.of(concurrentData.blockingFirst());
   }
 
-  public synchronized void createTransfer(Transfer transfer) {
 
-    Transfer previousTransfer = transfersRepository.getTransfer(transfer.getTransferId());
-    if (previousTransfer != null) {
-      throw new DuplicateTransferIdException(
-        "Transfer with id " + transfer.getTransferId() + " is already completed.");
-      }
+  public Optional<Transfer> getTransfer(UUID transferId) {
 
-    Account accountFrom = this.accountsService.getAccount(transfer.getAccountFromId());
-    Account accountTo = this.accountsService.getAccount(transfer.getAccountToId());
+     Observable<Transfer> concurrentData = (
+            retrieveTransfer (
+                    () -> transfersRepository.getTransfer(transferId), transferId)
+     );
 
-    if (accountFrom.getBalance().compareTo(transfer.getAmount()) >= 0) {
-      accountFrom.setBalance(accountFrom.getBalance().subtract(transfer.getAmount()));
-      accountTo.setBalance(accountTo.getBalance().add(transfer.getAmount()));
-
-      try {
-        this.transfersRepository.createTransfer(transfer);
-      } catch (Exception ex) {
-        log.error("Exception: " + ex.getMessage());
-        throw (ex);
-      }
-      this.emailNotificationService.notifyAboutTransfer(accountTo, "Transfer identified as " + transfer.getTransferId() + " is completed.");
-      this.emailNotificationService.notifyAboutTransfer(accountFrom, "Transfer identified as " + transfer.getTransferId() + " is completed.");
-    } else {
-      log.info("Transfer " + transfer.getTransferId() + " could not be created because source account had not enough funds.");
+    if (concurrentData.isEmpty().blockingGet()) {
+      return Optional.empty();
     }
-
+    return Optional.of(concurrentData.blockingFirst());
   }
 
-  public Transfer getTransfer(String transferId) {
-        return this.transfersRepository.getTransfer(transferId);
-    }
+  private <T> Observable<T> retrieveTransfer(Callable<T> callable, UUID transferId) {
+    return Observable.fromCallable(callable)
+            .doOnError(error -> log.error("Error retrieving transfer " + transferId + " info: " + error,
+                                          Throwables.getRootCause(error)))
+            .subscribeOn(Schedulers.newThread());
+  }
+
+  private <T> Observable<T> putTransfer(Callable<T> callable, Transfer transfer) {
+    return Observable.fromCallable(callable)
+            .doOnError(error -> log.error("Error creating transfer " + transfer.getTransferId().toString() + " info: " + error,
+                                          Throwables.getRootCause(error)))
+            .subscribeOn(Schedulers.single());
+  }
 
 }

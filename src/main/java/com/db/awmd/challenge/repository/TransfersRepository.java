@@ -2,11 +2,13 @@ package com.db.awmd.challenge.repository;
 
 import com.db.awmd.challenge.domain.Transfer;
 
+import java.util.UUID;
+
 public interface TransfersRepository {
 
-  Transfer getTransfer(String transferId);
+  Transfer getTransfer(UUID transferId);
 
-  void createTransfer(Transfer transfer);
+  Transfer createTransfer(Transfer transfer);
 
   void clearTransfers();
 

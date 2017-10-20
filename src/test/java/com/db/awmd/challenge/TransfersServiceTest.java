@@ -2,7 +2,6 @@ package com.db.awmd.challenge;
 
 import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.Transfer;
-import com.db.awmd.challenge.exception.DuplicateTransferIdException;
 import com.db.awmd.challenge.service.AccountsService;
 import com.db.awmd.challenge.service.EmailNotificationService;
 import com.db.awmd.challenge.service.TransfersService;
@@ -17,11 +16,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 
 @RunWith(SpringRunner.class)
@@ -39,8 +35,9 @@ public class TransfersServiceTest {
 
   @Before
   public void prepareMockMvc() throws Exception {
-    // Reset the existing accounts before each test.
+    // Reset the existing accounts and transfers before each test.
     this.accountsService.getAccountsRepository().clearAccounts();
+    this.transfersService.getTransfersRepository().clearTransfers();
    }
 
   @Test
@@ -53,32 +50,13 @@ public class TransfersServiceTest {
     accountTo.setBalance(new BigDecimal(2000));
     this.accountsService.createAccount(accountTo);
 
-    Transfer transfer = new Transfer("transfer-one", accountFrom.getAccountId(), accountTo.getAccountId(), BigDecimal.valueOf(500));
+    Transfer transfer = new Transfer(accountFrom.getAccountId(), accountTo.getAccountId(), BigDecimal.TEN);
     this.transfersService.createTransfer(transfer);
 
-    assertThat(this.transfersService.getTransfer(transfer.getTransferId())).isEqualTo(transfer);
-  }
-
-  @Test
-  public void addTransfer_failsOnDuplicateTransferId() throws Exception {
-    Account accountFrom = new Account("Id-123");
-    accountFrom.setBalance(new BigDecimal(1000));
-    this.accountsService.createAccount(accountFrom);
-
-    Account accountTo = new Account("Id-234");
-    accountTo.setBalance(new BigDecimal(2000));
-    this.accountsService.createAccount(accountTo);
-
-    String uniqueId = "Transfer-" + System.currentTimeMillis();
-    Transfer transfer = new Transfer(uniqueId, accountFrom.getAccountId(), accountTo.getAccountId(), BigDecimal.valueOf(500));
-    this.transfersService.createTransfer(transfer);
-
-    try {
-      this.transfersService.createTransfer(transfer);
-      fail("Should have failed when creating a new transfer with same transferId");
-    } catch (DuplicateTransferIdException ex) {
-      assertThat(ex.getMessage()).isEqualTo("Transfer with id " + transfer.getTransferId() + " is already completed.");
-    }
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getTransferId()).isEqualTo(transfer.getTransferId());
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAccountFromId()).isEqualTo(transfer.getAccountFromId());
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAccountToId()).isEqualTo(transfer.getAccountToId());
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAmount()).isEqualTo(transfer.getAmount());
   }
 
   @Test
@@ -91,12 +69,13 @@ public class TransfersServiceTest {
     accountTo.setBalance(new BigDecimal(2000));
     this.accountsService.createAccount(accountTo);
 
-    Transfer transfer = new Transfer("transfer-one", accountFrom.getAccountId(), accountTo.getAccountId(), BigDecimal.valueOf(500));
+    Transfer transfer = new Transfer(accountFrom.getAccountId(), accountTo.getAccountId(), BigDecimal.valueOf(500));
     this.transfersService.createTransfer(transfer);
 
-    assertThat(this.transfersService.getTransfer(transfer.getTransferId())).isEqualTo(transfer);
-
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getTransferId()).isEqualTo(transfer.getTransferId());
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAccountFromId()).isEqualTo(transfer.getAccountFromId());
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAccountToId()).isEqualTo(transfer.getAccountToId());
+    assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAmount()).isEqualTo(transfer.getAmount());
     verify(this.emailNotificationService, atLeastOnce()).notifyAboutTransfer(eq(accountTo), anyString());
   }
-
 }
