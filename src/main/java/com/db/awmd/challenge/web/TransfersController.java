@@ -43,8 +43,7 @@ public class TransfersController {
     if (!transfer.isPresent()) {
       throw new TransferNotFoundException("Transfer not found for transferId :" + transferId);
     }
-    return new ResponseEntity<>(transfer, HttpStatus.OK);
-
+    return new ResponseEntity<>(transfer, HttpStatus.CREATED);
   }
 
 }

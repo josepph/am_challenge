@@ -50,7 +50,6 @@ public class ConcurrencyTest {
         accountsService.getAccountsRepository().clearAccounts();
     }
 
-
     @Test
     public void concurrencyByServiceTest() throws Exception {
 
@@ -64,8 +63,8 @@ public class ConcurrencyTest {
                 .content("{\"accountId\":\"Id-234\",\"balance\":2000}"))
                 .andExpect(status().isCreated());
 
-        ExecutorService executor = Executors.newFixedThreadPool(100);
-        IntStream.range(0, 100)
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        IntStream.range(0, 400)
                 .forEach(i -> executor.submit(
                                 () -> transfersService.createTransfer(
                                         new Transfer("Id-123", "Id-234", BigDecimal.TEN)
@@ -78,9 +77,8 @@ public class ConcurrencyTest {
         Account accountFrom = accountsService.getAccount("Id-123");
         Account accountTo = accountsService.getAccount("Id-234");
 
-        assertThat(accountFrom.getBalance()).isEqualTo(BigDecimal.valueOf(4000));
-        assertThat(accountTo.getBalance()).isEqualTo(BigDecimal.valueOf(3000));
-
+        assertThat(accountFrom.getBalance()).isEqualTo(BigDecimal.valueOf(1000));
+        assertThat(accountTo.getBalance()).isEqualTo(BigDecimal.valueOf(6000));
     }
 
 
@@ -127,16 +125,17 @@ public class ConcurrencyTest {
                 .andExpect(status().isCreated());
 
         ExecutorService executor = Executors.newFixedThreadPool(10);
-        IntStream.range(0, 100)
-            .forEach(i -> executor.submit(
-                () -> {
-                    transfersService.createTransfer(new Transfer("Id-123", "Id-234", BigDecimal.ONE));
-                    transfersService.createTransfer(new Transfer("Id-345", "Id-456", BigDecimal.ONE));
-                    transfersService.createTransfer(new Transfer("Id-567", "Id-678", BigDecimal.ONE));
-                    transfersService.createTransfer(new Transfer("Id-789", "Id-890", BigDecimal.ONE));
-                    }
-                )
-            );
+
+            IntStream.range(0, 100)
+                    .forEach(i -> executor.submit(
+                            () -> {
+                                transfersService.createTransfer(new Transfer("Id-123", "Id-234", BigDecimal.ONE));
+                                transfersService.createTransfer(new Transfer("Id-345", "Id-456", BigDecimal.ONE));
+                                transfersService.createTransfer(new Transfer("Id-567", "Id-678", BigDecimal.ONE));
+                                transfersService.createTransfer(new Transfer("Id-789", "Id-890", BigDecimal.ONE));
+                            }
+                            )
+                    );
 
         executor.awaitTermination(30, TimeUnit.SECONDS);
 
@@ -148,7 +147,6 @@ public class ConcurrencyTest {
         assertThat(accountsService.getAccount("Id-678").getBalance()).isEqualTo(BigDecimal.valueOf(5100));
         assertThat(accountsService.getAccount("Id-567").getBalance()).isEqualTo(BigDecimal.valueOf(4900));
         assertThat(accountsService.getAccount("Id-678").getBalance()).isEqualTo(BigDecimal.valueOf(5100));
-
     }
 
 }

@@ -2,6 +2,7 @@ package com.db.awmd.challenge;
 
 import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.Transfer;
+import com.db.awmd.challenge.repository.TransfersRepositoryInMemory;
 import com.db.awmd.challenge.service.AccountsService;
 import com.db.awmd.challenge.service.EmailNotificationService;
 import com.db.awmd.challenge.service.TransfersService;
@@ -30,6 +31,9 @@ public class TransfersServiceTest {
   @Autowired
   private AccountsService accountsService;
 
+  @Autowired
+  private TransfersRepositoryInMemory transfersRepositoryInMemory;
+
   @MockBean
   private EmailNotificationService emailNotificationService;
 
@@ -37,7 +41,7 @@ public class TransfersServiceTest {
   public void prepareMockMvc() throws Exception {
     // Reset the existing accounts and transfers before each test.
     this.accountsService.getAccountsRepository().clearAccounts();
-    this.transfersService.getTransfersRepository().clearTransfers();
+    this.transfersRepositoryInMemory.clearTransfers();
    }
 
   @Test
