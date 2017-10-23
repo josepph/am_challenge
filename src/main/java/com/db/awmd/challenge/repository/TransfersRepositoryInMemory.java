@@ -3,7 +3,6 @@ package com.db.awmd.challenge.repository;
 import com.db.awmd.challenge.domain.Transfer;
 import com.db.awmd.challenge.exception.DatabaseErrorException;
 import com.db.awmd.challenge.service.AccountsService;
-import com.db.awmd.challenge.service.EmailNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -19,7 +18,6 @@ public class TransfersRepositoryInMemory implements TransfersRepository {
 
   private final Map<String, Transfer> transfers = new ConcurrentHashMap<>();
   private final AccountsService accountsService;
-  private final EmailNotificationService emailNotificationService;
 
   @Override
   public Transfer getTransfer(UUID transferId) {

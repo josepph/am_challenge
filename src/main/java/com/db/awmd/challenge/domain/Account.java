@@ -1,6 +1,7 @@
 package com.db.awmd.challenge.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.hibernate.validator.constraints.NotEmpty;
@@ -8,6 +9,7 @@ import org.hibernate.validator.constraints.NotEmpty;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Data
 public class Account {
@@ -15,6 +17,9 @@ public class Account {
   @NotNull
   @NotEmpty
   private final String accountId;
+
+  @JsonIgnore
+  private final ReentrantLock accountLock = new ReentrantLock();
 
   @NotNull
   @Min(value = 0, message = "Initial balance must be positive.")

@@ -4,8 +4,8 @@ import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.Transfer;
 import com.db.awmd.challenge.repository.TransfersRepositoryInMemory;
 import com.db.awmd.challenge.service.AccountsService;
-import com.db.awmd.challenge.service.EmailNotificationService;
 import com.db.awmd.challenge.service.TransfersService;
+import com.db.awmd.challenge.service.NotificationService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,7 +35,7 @@ public class TransfersServiceTest {
   private TransfersRepositoryInMemory transfersRepositoryInMemory;
 
   @MockBean
-  private EmailNotificationService emailNotificationService;
+  private NotificationService notificationService;
 
   @Before
   public void prepareMockMvc() throws Exception {
@@ -80,6 +80,6 @@ public class TransfersServiceTest {
     assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAccountFromId()).isEqualTo(transfer.getAccountFromId());
     assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAccountToId()).isEqualTo(transfer.getAccountToId());
     assertThat(this.transfersService.getTransfer(transfer.getTransferId()).get().getAmount()).isEqualTo(transfer.getAmount());
-    verify(this.emailNotificationService, atLeastOnce()).notifyAboutTransfer(eq(accountTo), anyString());
+    verify(this.notificationService, atLeastOnce()).notifyAboutTransfer(eq(accountTo), anyString());
   }
 }

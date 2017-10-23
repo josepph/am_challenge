@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Service
@@ -20,7 +22,7 @@ public class TransfersService {
 
   private final TransfersRepository transfersRepository;
   private final AccountsService accountsService;
-  private final EmailNotificationService emailNotificationService;
+  private final NotificationService notificationService;
 
   private final String MSG_POSITIVE_AMOUNT = "Cannot create transfer because amount has to be a positive value.";
   private final String MSG_NEGATIVE_BALANCE = "Cannot create transfer because the source account has not enough funds.";
@@ -73,21 +75,41 @@ public class TransfersService {
 
     if (validateTransfer(transfer)) {
 
-      try {
+
+      ReentrantLock lockTo, lockFrom;
+      lockTo = accountTo.getAccountLock();
+      lockFrom = accountFrom.getAccountLock();
+
+      if (lockTo.tryLock(2, TimeUnit.SECONDS) & lockFrom.tryLock(2, TimeUnit.SECONDS)) {
+        try {
 
         accountFrom.setBalance(accountFrom.getBalance().subtract(transfer.getAmount()));
         accountTo.setBalance(accountTo.getBalance().add(transfer.getAmount()));
 
         transfersRepository.createTransfer(transfer);
 
-        emailNotificationService.notifyAboutTransfer(accountTo, "Transfer identified as " + transfer.getTransferId() + " is completed.");
-        emailNotificationService.notifyAboutTransfer(accountFrom, "Transfer identified as " + transfer.getTransferId() + " is completed.");
+        notificationService.notifyAboutTransfer(accountTo, "Transfer identified as " + transfer.getTransferId() + " is completed.");
+        notificationService.notifyAboutTransfer(accountFrom, "Transfer identified as " + transfer.getTransferId() + " is completed.");
 
         return transfer;
 
-      } catch (Exception e) {
-        log.error("An error has occurred when creating transfer " + transfer.getTransferId() + " and has not been completed.");
-        throw e;
+        } catch (Exception e) {
+          log.error("An error has occurred when creating transfer " + transfer.getTransferId() + " and has not been completed.");
+          throw e;
+		} finally {
+          lockFrom.unlock();
+          lockTo.unlock();
+        }
+      }
+      else {
+        // Lock 1 could have been acquired
+        if(lockFrom.isHeldByCurrentThread()) {
+          lockFrom.unlock();
+        }
+        if(lockTo.isHeldByCurrentThread()) {
+          lockTo.unlock();
+        }
+        throw new TransferNotAllowedException("Transfer from account " + accountFrom.getAccountId() + " to account " + accountTo.getAccountId() + " couldn't be completed");
       }
     } else {
       throw new TransferNotAllowedException("Transfer not processed. Please check logs to find reason.");

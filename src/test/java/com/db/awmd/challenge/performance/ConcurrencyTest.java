@@ -16,9 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -63,10 +61,12 @@ public class ConcurrencyTest {
                 .content("{\"accountId\":\"Id-234\",\"balance\":2000}"))
                 .andExpect(status().isCreated());
 
-        ExecutorService executor = Executors.newFixedThreadPool(10);
+        CyclicBarrier cb = new CyclicBarrier(400);
+
+        ExecutorService executor = Executors.newFixedThreadPool(400);
         IntStream.range(0, 400)
                 .forEach(i -> executor.submit(
-                                () -> transfersService.createTransfer(
+                                () -> createTransferBarrier(cb,
                                         new Transfer("Id-123", "Id-234", BigDecimal.TEN)
                                 )
                             )
@@ -81,6 +81,19 @@ public class ConcurrencyTest {
         assertThat(accountTo.getBalance()).isEqualTo(BigDecimal.valueOf(6000));
     }
 
+    public void createTransferBarrier (CyclicBarrier cb, Transfer transfer) {
+
+        try {
+            cb.await();
+            transfersService.createTransfer(transfer);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (BrokenBarrierException e) {
+            e.printStackTrace();
+        }
+
+
+    }
 
     @Test
     public void concurrencyTransferTest() throws Exception {
@@ -124,15 +137,17 @@ public class ConcurrencyTest {
                 .content("{\"accountId\":\"Id-890\",\"balance\":5000}"))
                 .andExpect(status().isCreated());
 
-        ExecutorService executor = Executors.newFixedThreadPool(10);
+        ExecutorService executor = Executors.newFixedThreadPool(100);
+
+        CyclicBarrier cb = new CyclicBarrier(100);
 
             IntStream.range(0, 100)
                     .forEach(i -> executor.submit(
                             () -> {
-                                transfersService.createTransfer(new Transfer("Id-123", "Id-234", BigDecimal.ONE));
-                                transfersService.createTransfer(new Transfer("Id-345", "Id-456", BigDecimal.ONE));
-                                transfersService.createTransfer(new Transfer("Id-567", "Id-678", BigDecimal.ONE));
-                                transfersService.createTransfer(new Transfer("Id-789", "Id-890", BigDecimal.ONE));
+                                createTransferBarrier(cb,new Transfer("Id-123", "Id-234", BigDecimal.ONE));
+                                createTransferBarrier(cb,new Transfer("Id-345", "Id-456", BigDecimal.ONE));
+                                createTransferBarrier(cb,new Transfer("Id-567", "Id-678", BigDecimal.ONE));
+                                createTransferBarrier(cb,new Transfer("Id-789", "Id-890", BigDecimal.ONE));
                             }
                             )
                     );

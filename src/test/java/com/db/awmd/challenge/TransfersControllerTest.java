@@ -75,6 +75,12 @@ public class TransfersControllerTest {
             .andExpect(status().is2xxSuccessful())
             .andExpect(jsonPath("$.accountFromId", containsString("Id-123")))
             .andExpect(jsonPath("$.accountToId", containsString("Id-234")));
+
+    BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
+
+    assertEquals(finalBalanceFrom, BigDecimal.valueOf(2600));
+    assertEquals(finalBalanceTo, BigDecimal.valueOf(2400));
   }
 
   @Test
@@ -85,6 +91,12 @@ public class TransfersControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(strJson))
             .andExpect(status().isBadRequest());
+
+    BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
+
+    assertEquals(finalBalanceFrom, BigDecimal.valueOf(3000));
+    assertEquals(finalBalanceTo, BigDecimal.valueOf(2000));
   }
 
   @Test
@@ -93,6 +105,12 @@ public class TransfersControllerTest {
     this.mockMvc.perform(post("/v1/transfers")
             .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isBadRequest());
+
+    BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
+
+    assertEquals(finalBalanceFrom, BigDecimal.valueOf(3000));
+    assertEquals(finalBalanceTo, BigDecimal.valueOf(2000));
   }
 
   @Test
@@ -103,6 +121,12 @@ public class TransfersControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(strJson))
             .andExpect(status().isBadRequest());
+
+    BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
+
+    assertEquals(finalBalanceFrom, BigDecimal.valueOf(3000));
+    assertEquals(finalBalanceTo, BigDecimal.valueOf(2000));
   }
 
   @Test
@@ -114,6 +138,13 @@ public class TransfersControllerTest {
             .content(strJson))
             .andExpect(status().is2xxSuccessful())
             .andReturn();
+
+    BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
+
+    assertEquals(finalBalanceFrom, BigDecimal.valueOf(3000));
+    assertEquals(finalBalanceTo, BigDecimal.valueOf(2000));
+
   }
 
   @Test
@@ -124,6 +155,12 @@ public class TransfersControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(strJson))
             .andExpect(status().isBadRequest());
+
+    BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
+    BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
+
+    assertEquals(finalBalanceFrom, BigDecimal.valueOf(3000));
+    assertEquals(finalBalanceTo, BigDecimal.valueOf(2000));
   }
 
   @Test
@@ -156,8 +193,8 @@ public class TransfersControllerTest {
      BigDecimal finalBalanceFrom = this.accountsService.getAccount("Id-123").getBalance();
      BigDecimal finalBalanceTo = this.accountsService.getAccount("Id-234").getBalance();
 
-     assertEquals(initialBalanceFrom.subtract(BigDecimal.valueOf(400)), BigDecimal.valueOf(2600));
-     assertEquals(initialBalanceTo.add(BigDecimal.valueOf(400)), BigDecimal.valueOf(2400));
+     assertEquals(finalBalanceFrom, BigDecimal.valueOf(2600));
+     assertEquals(finalBalanceTo, BigDecimal.valueOf(2400));
 
   }
 
