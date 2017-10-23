@@ -35,11 +35,12 @@
 
 1) UUID TransferId is automatically created by the service
 2) Accounts involved in a transfer need to exist before the transfer is created
+3) Concurrency has been resolved by enabling asynchronous processing
 
 
 ## Pending tasks to be production ready:
 
-1) Add persistant database, to keep all data in case the application stops running
+1) Add persistent database, to keep all data in case the application stops running
 2) Security should be added:
     Authentication to ensure user is who he says he is
     Authorization to ensure once a user is logged in the system can access to the operations
